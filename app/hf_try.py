@@ -1,37 +1,46 @@
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from qdrant_client import QdrantClient
+from langchain_core.documents import Document
+from langchain_qdrant import QdrantVectorStore
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.exceptions import OutputParserException
-from langchain_core.documents import Document
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
-from jsonformer import OllamaJsonformer
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+# from jsonformer import Jsonformer
 import json
 
-MODEL_NAME = "gemma3:4b" 
-EMBED_MODEL = "all-minilm"
+MODEL_NAME = "NousResearch/Hermes-3-Llama-3.2-3B"
+EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 QDRANT_URL = "http://localhost:6333"
 QDRANT_COLLECTION = "scripts_rag"
 
-# --- LLM и embeddings ---
-llm = ChatOllama(model=MODEL_NAME)
-embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, trust_remote_code=True)
 
-# --- JSON парсер ---
+generation_pipeline = pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    max_new_tokens=512,
+    temperature=0.3,
+    do_sample=False
+)
+
+llm = HuggingFacePipeline(pipeline=generation_pipeline)
+
+embeddings = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
+
 output_parser = JsonOutputParser()
 
-# --- Клиент Qdrant ---
 client = QdrantClient(url=QDRANT_URL)
 
-# --- Разделитель текста ---
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=100,
     length_function=len
 )
 
-# --- Создание векторного хранилища ---
 def create_vector_store(script_text: str):
     chunks = splitter.split_text(script_text)
     docs = [Document(page_content=chunk) for chunk in chunks]
@@ -42,10 +51,8 @@ def create_vector_store(script_text: str):
         url=QDRANT_URL,
         collection_name=QDRANT_COLLECTION
     )
-    return vectorstore.as_retriever(search_kwargs={"k": 10})
+    return vectorstore.as_retriever(search_kwargs={"k": 3})
 
-
-# --- Промпт для классификации ---
 CLASSIFY_PROMPT = """
 RETURN ONLY VALID JSON.
 You are a parental content classifier.
@@ -71,7 +78,6 @@ Now classify it:
 
 prompt = ChatPromptTemplate.from_template(CLASSIFY_PROMPT)
 
-# --- JSON схема для OllamaJsonformer ---
 json_schema = {
     "type": "object",
     "properties": {
@@ -91,44 +97,22 @@ json_schema = {
     "required": ["AgeCategory", "ParentsGuide", "Summary"]
 }
 
-
-# --- Основная функция анализа ---
 def run_analysis(script_text: str):
-    query = "Classify the parental content rating of this script."
     retriever = create_vector_store(script_text)
+    chain = retriever | prompt | llm | output_parser
 
-    def combine_docs(docs):
-        return "\n\n".join([d.page_content for d in docs])
-
-    chain = (
-        retriever
-        | combine_docs
-        | (lambda context: {"context": context})
-        | prompt
-        | llm
-        | output_parser
-    )
+    query = "Classify the parental content rating of this script."
 
     try:
         result = chain.invoke(query)
-
-        # теперь result уже JSON-совместимый объект (str или dict)
-        if isinstance(result, str):
-            try:
-                data = json.loads(result)
-            except json.JSONDecodeError:
-                data = {"AgeCategory": "Unknown", "ParentsGuide": {}, "Summary": "Invalid JSON output"}
-        elif isinstance(result, dict):
-            data = result
-        else:
-            data = {"AgeCategory": "Unknown", "ParentsGuide": {}, "Summary": "Unexpected output type"}
-
+        data = json.loads(result["result"]) if isinstance(result, dict) else json.loads(result)
         return data
 
     except (OutputParserException, json.JSONDecodeError):
         json_prompt = f"Analyze the following movie script and output classification as JSON:\n\n{script_text}"
-        jsonformer = OllamaJsonformer(llm, json_schema, json_prompt)
-        return jsonformer()
+        jsonformer = Jsonformer(model, tokenizer, json_schema, json_prompt)
+        data = jsonformer()
+        return data
 
     except Exception as e:
         return {
