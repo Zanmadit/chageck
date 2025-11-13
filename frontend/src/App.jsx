@@ -19,7 +19,7 @@ export default function App() {
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [openCategory, setOpenCategory] = useState(null); // какой блок открыт
+  const [openCategory, setOpenCategory] = useState(null);
 
   const handleFileChange = (e) => setFile(e.target.files[0]);
 
@@ -39,7 +39,7 @@ export default function App() {
       const data = await res.json();
       const taskId = data.task_id;
 
-      // Polling
+      // Polling for result
       let taskResult = null;
       while (!taskResult) {
         await new Promise((r) => setTimeout(r, 1000));
@@ -65,7 +65,7 @@ export default function App() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-center mb-4">Age Rating Analyzer</h1>
+      <h1 className="text-3xl font-bold text-center mb-4">Руководство для родителей</h1>
 
       <div className="flex space-x-2 items-center">
         <input type="file" onChange={handleFileChange} className="border p-2 rounded" />
@@ -78,9 +78,18 @@ export default function App() {
         </button>
       </div>
 
+      {loading && (
+        <div className="text-center text-gray-500 animate-pulse">
+          Анализ выполняется, пожалуйста подождите...
+        </div>
+      )}
+
       <div className="border-t pt-4 space-y-4">
         <div className="text-lg font-semibold">
-          AgeCategory: <span className="text-blue-700">{result?.AgeCategory || "-"}</span>
+          AgeCategory:{" "}
+          <span className={`px-2 py-1 rounded ${result?.AgeCategory ? "bg-blue-100 text-blue-700" : "bg-gray-100"}`}>
+            {result?.AgeCategory || "-"}
+          </span>
         </div>
 
         {categories.map((cat) => {
@@ -89,18 +98,18 @@ export default function App() {
           const isOpen = openCategory === cat;
 
           return (
-            <div key={cat} className="border rounded p-2">
+            <div key={cat} className="border rounded p-2 bg-white">
               <div
-                className="flex items-center space-x-2 cursor-pointer"
+                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
                 onClick={() => setOpenCategory(isOpen ? null : cat)}
               >
-                <div className={`w-4 h-8 ${severityColors[severity] || "bg-gray-400"} rounded`}></div>
+                <div className={`w-4 h-8 ${severityColors[severity] || "bg-gray-400"} rounded`} />
                 <span className="font-medium">{cat}: {severity}</span>
                 <span className="ml-auto">{isOpen ? "▲" : "▼"}</span>
               </div>
 
               {isOpen && (
-                <div className="mt-2 p-2 bg-gray-100 rounded">
+                <div className="mt-2 p-2 bg-gray-100 rounded transition-all duration-300 ease-in-out">
                   {summary}
                 </div>
               )}

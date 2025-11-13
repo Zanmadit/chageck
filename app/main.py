@@ -9,10 +9,9 @@ from celery.result import AsyncResult
 from docx import Document as DocxDocument
 from app.tasks import analyze_script, celery_app
 
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-app = FastAPI(title="PDF/DOCX Text Analyzer")
+app = FastAPI(title="Parents Guide")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +22,7 @@ app.add_middleware(
 )
 
 def clean_text(text: str) -> str:
-    """Удаляет непечатные символы и лишние пробелы."""
+    """Remove non-printable characters and extra spaces."""
     if not text:
         return ""
     text = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
@@ -34,10 +33,9 @@ def clean_text(text: str) -> str:
 async def extract_text_from_upload(file: UploadFile) -> str:
     ext = os.path.splitext(file.filename)[1].lower()
 
-    # читаем как байты
     file_bytes = await file.read()
     if not file_bytes:
-        raise HTTPException(status_code=400, detail="Файл пуст")
+        raise HTTPException(status_code=400, detail="The file is empty.")
 
     try:
         if ext == ".pdf":
@@ -47,12 +45,12 @@ async def extract_text_from_upload(file: UploadFile) -> str:
             doc = DocxDocument(io.BytesIO(file_bytes))
             text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
         else:
-            raise HTTPException(status_code=400, detail="Поддерживаются только PDF и DOCX")
+            raise HTTPException(status_code=400, detail="Only PDF and DOCX are supported.")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Ошибка при чтении файла: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
 
     if not text.strip():
-        raise HTTPException(status_code=400, detail="Файл не содержит текста")
+        raise HTTPException(status_code=400, detail="The file does not contain text.")
 
     return clean_text(text)
 
@@ -69,7 +67,7 @@ async def upload_script(file: UploadFile):
 def get_result(task_id: str):
     ar = AsyncResult(task_id, app=celery_app)
     if not ar:
-        raise HTTPException(status_code=404, detail="Задача не найдена")
+        raise HTTPException(status_code=404, detail="Task not found")
 
     if ar.state in ["PENDING", "PROGRESS"]:
         return {"status": ar.state.lower(), "meta": ar.info or {}}

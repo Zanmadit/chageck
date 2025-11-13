@@ -3,17 +3,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_core.documents import Document
-
-LAW_COLLECTION = "law_rag"
-EMBED_MODEL = "all-minilm"
-QDRANT_URL = "http://localhost:6333"
-LAW_PATH = "data/law.pdf"
+from app.config import EMBED_MODEL, QDRANT_URL, LAW_COLLECTION, LAW_PATH, CHUNK_SIZE, CHUNK_OVERLAP
 
 embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000, 
-    chunk_overlap=200,
+    chunk_size=CHUNK_SIZE, 
+    chunk_overlap=CHUNK_OVERLAP,
     length_function=len
 )
 
