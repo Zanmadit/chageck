@@ -4,10 +4,10 @@ from app.pipeline import run_analysis
 celery_app = Celery(
     "tasks",
     broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0",  # <- ОБЯЗАТЕЛЬНО укажи backend
+    backend="redis://localhost:6379/0", 
 )
 
-# Опции сериализации (рекомендуется JSON)
+# Serialization options (JSON recommended)
 celery_app.conf.update(
     task_serializer='json',
     result_serializer='json',
@@ -16,5 +16,4 @@ celery_app.conf.update(
 
 @celery_app.task(bind=True)
 def analyze_script(self, script_text: str):
-    # Можно логировать прогресс: self.update_state(state='PROGRESS', meta={...})
     return run_analysis(script_text)
