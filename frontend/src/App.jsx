@@ -18,6 +18,7 @@ const categories = [
 export default function App() {
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
+  const [taskId, setTaskId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [openCategory, setOpenCategory] = useState(null);
 
@@ -27,6 +28,7 @@ export default function App() {
     if (!file) return;
     setLoading(true);
     setResult(null);
+    setTaskId(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -36,14 +38,17 @@ export default function App() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      const taskId = data.task_id;
 
-      // Polling for result
+      const data = await res.json();
+      const tId = data.task_id;
+      setTaskId(tId);
+
+      // Polling for task result
       let taskResult = null;
       while (!taskResult) {
-        await new Promise((r) => setTimeout(r, 1000));
-        const resultRes = await fetch(`http://localhost:8000/result/${taskId}`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const resultRes = await fetch(`http://localhost:8000/result/${tId}`);
         const resultData = await resultRes.json();
 
         if (resultData.status === "success") {
@@ -61,6 +66,11 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadPDF = () => {
+    if (!taskId) return;
+    window.open(`http://localhost:8000/download_pdf/${taskId}`, "_blank");
   };
 
   return (
@@ -84,39 +94,59 @@ export default function App() {
         </div>
       )}
 
-      <div className="border-t pt-4 space-y-4">
-        <div className="text-lg font-semibold">
-          AgeCategory:{" "}
-          <span className={`px-2 py-1 rounded ${result?.AgeCategory ? "bg-blue-100 text-blue-700" : "bg-gray-100"}`}>
-            {result?.AgeCategory || "-"}
-          </span>
-        </div>
-
-        {categories.map((cat) => {
-          const severity = result?.ParentsGuide?.[cat]?.Severity || "Нет";
-          const summary = result?.ParentsGuide?.[cat]?.Reason || "Нет данных";
-          const isOpen = openCategory === cat;
-
-          return (
-            <div key={cat} className="border rounded p-2 bg-white">
-              <div
-                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                onClick={() => setOpenCategory(isOpen ? null : cat)}
+      {result && (
+        <>
+          <div className="border-t pt-4 space-y-4">
+            <div className="text-lg font-semibold">
+              AgeCategory:{" "}
+              <span
+                className={`px-2 py-1 rounded ${
+                  result?.AgeCategory ? "bg-blue-100 text-blue-700" : "bg-gray-100"
+                }`}
               >
-                <div className={`w-4 h-8 ${severityColors[severity] || "bg-gray-400"} rounded`} />
-                <span className="font-medium">{cat}: {severity}</span>
-                <span className="ml-auto">{isOpen ? "▲" : "▼"}</span>
-              </div>
-
-              {isOpen && (
-                <div className="mt-2 p-2 bg-gray-100 rounded transition-all duration-300 ease-in-out">
-                  {summary}
-                </div>
-              )}
+                {result?.AgeCategory || "-"}
+              </span>
             </div>
-          );
-        })}
-      </div>
+
+            {categories.map((cat) => {
+              const severity = result?.ParentsGuide?.[cat]?.Severity || "Нет";
+              const summary = result?.ParentsGuide?.[cat]?.Reason || "Нет данных";
+              const isOpen = openCategory === cat;
+
+              return (
+                <div key={cat} className="border rounded p-2 bg-white">
+                  <div
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    onClick={() => setOpenCategory(isOpen ? null : cat)}
+                  >
+                    <div className={`w-4 h-8 ${severityColors[severity] || "bg-gray-400"} rounded`} />
+                    <span className="font-medium">
+                      {cat}: {severity}
+                    </span>
+                    <span className="ml-auto">{isOpen ? "▲" : "▼"}</span>
+                  </div>
+
+                  {isOpen && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded transition-all duration-300 ease-in-out">
+                      {summary}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Кнопка СКАЧАТЬ PDF */}
+          <div className="pt-4">
+            <button
+              onClick={downloadPDF}
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+            >
+              Скачать PDF отчёт
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
