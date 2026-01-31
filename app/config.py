@@ -17,8 +17,9 @@ class Settings(BaseSettings):
   # Law
   LAW_PATH: str
 
+  REDIS_URL: str
+
   model_config = ConfigDict(env_file=".env")
 
 
 settings = Settings()
-print(settings.QDRANT_URL)
