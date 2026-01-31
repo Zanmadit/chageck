@@ -136,7 +136,7 @@ export default function App() {
             })}
           </div>
 
-          {/* Кнопка СКАЧАТЬ PDF */}
+          {/* Download PDF */}
           <div className="pt-4">
             <button
               onClick={downloadPDF}

@@ -7,16 +7,21 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from app.jsonformer import OllamaJsonformer
-from app.config import MODEL_NAME, EMBED_MODEL, QDRANT_URL, QDRANT_COLLECTION, LAW_COLLECTION, CHUNK_SIZE, CHUNK_OVERLAP, CLASSIFY_PROMPT
+from app.config import settings
+from pathlib import Path
 import json
 
-llm = ChatOllama(model=MODEL_NAME)
+PROMPT_PATH = Path("prompts/classify_prompt.txt")
 
-embeddings = OllamaEmbeddings(model=EMBED_MODEL)
+CLASSIFY_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
+
+llm = ChatOllama(model=settings.MODEL_NAME)
+
+embeddings = OllamaEmbeddings(model=settings.EMBED_MODEL)
 
 law_vector_store = QdrantVectorStore.from_existing_collection(
-    url=QDRANT_URL,
-    collection_name=LAW_COLLECTION,
+    url=settings.QDRANT_URL,
+    collection_name=settings.LAW_COLLECTION,
     embedding=embeddings
 )
 
@@ -24,11 +29,11 @@ law_retriever = law_vector_store.as_retriever(search_kwargs={"k": 5})
 
 output_parser = JsonOutputParser()
 
-client = QdrantClient(url=QDRANT_URL)
+client = QdrantClient(url=settings.QDRANT_URL)
 
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=CHUNK_SIZE, 
-    chunk_overlap=CHUNK_OVERLAP,
+    chunk_size=settings.CHUNK_SIZE, 
+    chunk_overlap=settings.CHUNK_OVERLAP,
     length_function=len
 )
 
@@ -59,17 +64,17 @@ def create_vector_store(script_text: str):
     chunks = splitter.split_text(script_text)
     docs = [Document(page_content=chunk) for chunk in chunks]
 
-    client = QdrantClient(url=QDRANT_URL)
+    client = QdrantClient(url=settings.QDRANT_URL)
 
     # Delete collection, if exists
-    if client.collection_exists(QDRANT_COLLECTION):
-        client.delete_collection(QDRANT_COLLECTION)
+    if client.collection_exists(settings.QDRANT_COLLECTION):
+        client.delete_collection(settings.QDRANT_COLLECTION)
 
     vectorstore = QdrantVectorStore.from_documents(
         docs,
         embeddings,
-        url=QDRANT_URL,
-        collection_name=QDRANT_COLLECTION
+        url=settings.QDRANT_URL,
+        collection_name=settings.QDRANT_COLLECTION
     )
 
     return vectorstore.as_retriever(search_kwargs={"k": 5})

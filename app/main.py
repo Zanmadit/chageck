@@ -88,10 +88,9 @@ def get_result(task_id: str):
     return {"status": ar.state, "info": ar.info or {}}
 
 
-FONT_PATH = "/usr/share/fonts/Adwaita/AdwaitaMono-BoldItalic.ttf"  # или путь к другому TTF
+FONT_PATH = "/usr/share/fonts/Adwaita/AdwaitaMono-BoldItalic.ttf" 
 pdfmetrics.registerFont(TTFont("DejaVu", FONT_PATH))
 
-# Создаем стили с этим шрифтом
 styles = getSampleStyleSheet()
 styles.add(ParagraphStyle(name='RussianNormal', parent=styles['Normal'], fontName="DejaVu"))
 styles.add(ParagraphStyle(name='RussianHeading', parent=styles['Heading3'], fontName="DejaVu"))
@@ -100,7 +99,6 @@ styles.add(ParagraphStyle(name='RussianTitle', parent=styles['Title'], fontName=
 
 @app.get("/download_pdf/{task_id}")
 def download_pdf(task_id: str):
-    # Получаем результат задачи Celery
     ar = AsyncResult(task_id, app=celery_app)
     if not ar or not ar.successful():
         raise HTTPException(status_code=404, detail="Result not found")
@@ -108,20 +106,16 @@ def download_pdf(task_id: str):
     result = ar.result
     pdf_path = f"/tmp/{task_id}.pdf"
 
-    # Создаем PDF
     doc = SimpleDocTemplate(pdf_path, pagesize=A4)
     story = []
 
-    # Заголовок
     story.append(Paragraph("Parents Guide — Анализ сценария", styles["RussianTitle"]))
     story.append(Spacer(1, 12))
 
-    # AgeCategory
     age = result.get("AgeCategory", "Не указано")
     story.append(Paragraph(f"<b>Возрастная категория:</b> {age}", styles["RussianNormal"]))
     story.append(Spacer(1, 12))
 
-    # ParentsGuide
     pg = result.get("ParentsGuide", {})
     for category, data in pg.items():
         sev = data.get("Severity", "Нет")
@@ -131,7 +125,6 @@ def download_pdf(task_id: str):
         story.append(Paragraph(reason.replace("\n", "<br/>"), styles["RussianNormal"]))
         story.append(Spacer(1, 12))
 
-    # Генерация PDF
     doc.build(story)
 
     return FileResponse(

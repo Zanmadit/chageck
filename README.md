@@ -1,6 +1,6 @@
 # Chageck
 
-A system for automatically analyzing movie and TV series scripts for age ratings (0+, 6+, 12+, 16+, 18+) in accordance with Russian law (Федеральный закон №436-ФЗ).
+A system for automatically analyzing movie and TV series scripts for age ratings (0+, 6+, 12+, 16+, 18+) in accordance with Law of the Republic of Kazakhstan on the Protection of Children from Information Harmful to Their Health and Development.
 
 Uses *LangChain* + *Ollama* for NLP, *Qdrant* for vector search, and *Celery* for asynchronous file processing.
 
@@ -32,7 +32,7 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-3. Configure `app/config.py` with the following parameters
+3. Configure `.env` 
 
 4. Run services (redis, Qdrant)
 ```
@@ -78,6 +78,8 @@ npm run dev
 │   ├── package.json
 │   ├── package-lock.json
 │   ├── postcss.config.js
+│   ├── public
+│   │   └── vite.svg
 │   ├── README.md
 │   ├── src
 │   │   ├── App.css
@@ -88,6 +90,8 @@ npm run dev
 │   │   └── main.jsx
 │   ├── tailwind.config.js
 │   └── vite.config.js
+├── prompts
+│   └── classify_prompt.txt
 ├── README.md
 └── requirements.txt
 ```

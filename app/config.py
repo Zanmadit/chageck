@@ -1,73 +1,24 @@
-# Models
-MODEL_NAME = "gemma3:4b"
-EMBED_MODEL = "all-minilm"
+from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
-# Qdrant
-QDRANT_URL = "http://localhost:6333"
-QDRANT_COLLECTION = "scripts_rag"
-LAW_COLLECTION = "law_rag" 
+class Settings(BaseSettings):
+  MODEL_NAME: str
+  EMBED_MODEL: str
 
-# Chunking
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
+  # Qdrant
+  QDRANT_URL: str
+  QDRANT_COLLECTION:str
+  LAW_COLLECTION:str
 
-# Law
-LAW_PATH = "data/law.pdf"
+  # Chunking
+  CHUNK_SIZE: int
+  CHUNK_OVERLAP: int
 
-CLASSIFY_PROMPT = """
-ВЕРНИТЕ ТОЛЬКО ВАЛИДНЫЙ JSON.
+  # Law
+  LAW_PATH: str
 
-Вы эксперт по российскому законодательству о классификации контента (Федеральный закон №436-ФЗ).
-Ваша задача — проанализировать сценарий фильма или сериала и присвоить возрастной рейтинг согласно российскому законодательству.
+  model_config = ConfigDict(env_file=".env")
 
-Используйте следующий контекст закона и фрагмент сценария.
 
-Контекст закона:
-{context}
-
-Сценарий:
-{script}
-
-Оцените наличие и степень потенциально вредного контента по следующим категориям:
-- Секс и нагота
-- Насилие и жестокость
-- Ненормативная лексика
-- Алкоголь, наркотики и курение
-- Пугающие и напряжённые сцены
-
-Для каждой категории укажите:
-1. Уровень серьёзности: один из ["Нет", "Слабый", "Средний", "Сильный"]
-2. Юридическое обоснование: краткое объяснение с ссылкой на соответствующую статью Федерального закона №436-ФЗ.
-
-Наконец, определите **общий AgeCategory** (0+, 6+, 12+, 16+, или 18+) на основе самой серьёзной категории.
-
-Ваш ответ должен быть **строго валидным JSON** и следовать этой схеме:
-
-{{
-  "AgeCategory": "string",
-  "ParentsGuide": {{
-    "Sex & Nudity": {{
-      "Severity": "string",
-      "Reason": "string"
-    }},
-    "Violence & Gore": {{
-      "Severity": "string",
-      "Reason": "string"
-    }},
-    "Profanity": {{
-      "Severity": "string",
-      "Reason": "string"
-    }},
-    "Alcohol, Drugs & Smoking": {{
-      "Severity": "string",
-      "Reason": "string"
-    }},
-    "Frightening & Intense Scenes": {{
-      "Severity": "string",
-      "Reason": "string"
-    }}
-  }}
-}}
-
-Проанализируйте предоставленный фрагмент сценария и заполните JSON соответственно на русском языке.
-"""
+settings = Settings()
+print(settings.QDRANT_URL)
