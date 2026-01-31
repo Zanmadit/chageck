@@ -1,10 +1,11 @@
 from celery import Celery
 from app.pipeline import run_analysis
+from app.config import settings
 
 celery_app = Celery(
     "tasks",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0", 
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL, 
 )
 
 # Serialization options (JSON recommended)
